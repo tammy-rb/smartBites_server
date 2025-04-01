@@ -43,8 +43,8 @@ export default async function convertMealAnalysisRequest(req, res, next) {
         }
 
         // Extract file paths
-        const picture_before = path.join(PATH_TO_FILES, mealImages[0].filename);
-        const picture_after = path.join(PATH_TO_FILES, mealImages[1].filename);
+        const picture_before = PATH_TO_FILES + mealImages[0].filename;
+        const picture_after = PATH_TO_FILES + mealImages[1].filename;
 
         // Fetch product details from database
         const products = await MealAnalysisDL.getProductsBySkuList(skuList);

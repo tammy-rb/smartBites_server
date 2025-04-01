@@ -1,6 +1,7 @@
 import MealAnalysisDL from "../DL/meal_analysis_req.dl.js"
 import axios from 'axios';
 import fs from 'fs';
+import prepareLlmPrompt from "../LLM/prepareLLMPrompt.js";
 
 class MealAnalysisController {
 
@@ -14,10 +15,10 @@ class MealAnalysisController {
             const savedRequest = await MealAnalysisDL.saveAnalysisRequest(analysisRequest);
             
             // Prepare data for LLM - excluding weight information that will be predicted
-            //const llmRequestData = MealAnalysisController.prepareLlmRequest(analysisRequest);
+            const llmRequestPrompt = prepareLlmPrompt(analysisRequest);
             
             // Send to LLM and get results
-            //const llmResults = await MealAnalysisController.analyzeMealWithLLM(llmRequestData);
+            const llmResults = await MealAnalysisController.analyzeMealWithLLM(analysisRequest, llmRequestPrompt);
             
             // Compare with provided weights for verification
             //const verificationResults = MealAnalysisController.verifyResults(llmResults, analysisRequest);
@@ -35,22 +36,6 @@ class MealAnalysisController {
         }
     }
     
-    static prepareLlmRequest(analysisRequest) {
-        // Create a copy of the request without the weights we want LLM to predict
-        const llmRequest = {
-            person_id: analysisRequest.person_id,
-            description: analysisRequest.description,
-            picture_before: analysisRequest.picture_before,
-            picture_after: analysisRequest.picture_after,
-            // Include products but remove weight_in_req that was provided by user
-            products: analysisRequest.products.map(product => {
-                const { weight_in_req, ...productWithoutUserWeight } = product;
-                return productWithoutUserWeight;
-            })
-        };
-        
-        return llmRequest;
-    }
     
     static verifyResults(llmResults, originalRequest) {
         // Compare LLM predicted weights with the weights provided by user
@@ -120,7 +105,7 @@ class MealAnalysisController {
         }
     }
     
-    static async analyzeMealWithLLM(requestData) {
+    static async analyzeMealWithLLM(requestData, llmRequestPrompt ) {
         try {
             // Convert the images to base64
             const beforeImageBase64 = fs.readFileSync(requestData.picture_before, { encoding: 'base64' });
@@ -259,6 +244,106 @@ class MealAnalysisController {
                     predicted_weight_consumed: 0
                 }))
             };
+        }
+    }
+
+    static async analyzeMealWithLLM1(analysisRequest, llmRequestPrompt) {
+        try {
+            // Configure the LLM client (using OpenAI as an example)
+            // You would need to import your preferred LLM client at the top of your file
+            const llmClient = new OpenAIClient({
+                apiKey: process.env.OPENAI_API_KEY,
+                // You might want to define these in environment variables or configuration
+                modelName: process.env.LLM_MODEL || 'gpt-4-vision-preview',
+                temperature: 0.2, // Lower temperature for more precise predictions
+                maxTokens: 2000
+            });
+            
+            // Prepare the images for vision model processing
+            const images = [
+                { type: 'image_url', image_url: { url: `file://${path.resolve(analysisRequest.picture_before)}` } },
+                { type: 'image_url', image_url: { url: `file://${path.resolve(analysisRequest.picture_after)}` } }
+            ];
+            
+            // Add reference product images
+            analysisRequest.products.forEach(product => {
+                product.pictures.forEach(pic => {
+                    images.push({
+                        type: 'image_url',
+                        image_url: { url: `file://${path.resolve(pic.imageUrl)}` }
+                    });
+                });
+            });
+            
+            // Create the LLM message payload
+            const messages = [
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: llmRequestPrompt },
+                        ...images
+                    ]
+                }
+            ];
+            
+            console.log('Sending request to LLM...');
+            
+            // Send request to LLM
+            const response = await llmClient.chat.completions.create({
+                model: process.env.LLM_MODEL || 'gpt-4-vision-preview',
+                messages,
+                temperature: 0.2,
+                max_tokens: 2000,
+                response_format: { type: 'json_object' }
+            });
+            
+            // Parse the response
+            const responseText = response.choices[0].message.content;
+            let parsedResponse;
+            
+            try {
+                parsedResponse = JSON.parse(responseText);
+            } catch (error) {
+                console.error('Failed to parse LLM response as JSON:', error);
+                
+                // Attempt to extract JSON if it's embedded in markdown or other text
+                const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || 
+                                  responseText.match(/\{[\s\S]*\}/);
+                
+                if (jsonMatch) {
+                    try {
+                        parsedResponse = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                    } catch (e) {
+                        throw new Error('Could not parse LLM response in any format');
+                    }
+                } else {
+                    throw new Error('LLM response did not contain valid JSON');
+                }
+            }
+            
+            // Validate the parsed response has the expected structure
+            if (!parsedResponse.products || !Array.isArray(parsedResponse.products)) {
+                throw new Error('LLM response missing required product analysis');
+            }
+            
+            // Add metadata to the response
+            const enhancedResponse = {
+                ...parsedResponse,
+                metadata: {
+                    analysis_timestamp: new Date().toISOString(),
+                    model_used: response.model,
+                    prompt_tokens: response.usage.prompt_tokens,
+                    completion_tokens: response.usage.completion_tokens,
+                    total_tokens: response.usage.total_tokens
+                }
+            };
+            
+            console.log('LLM analysis completed successfully');
+            return enhancedResponse;
+            
+        } catch (error) {
+            console.error('Error in LLM analysis:', error);
+            throw new Error(`Failed to analyze meal with LLM: ${error.message}`);
         }
     }
 }

@@ -2,17 +2,6 @@ import con from "./connection.js";
 
 class MealAnalysisReq_DL{
 
-    constructor(analysisfReq) {
-        if (analysisfReq) {
-          this.weight_before = analysisfReq.weight_before;   
-          this.weight_after = analysisfReq.weight_after;  
-          this.products = analysisfReq.products; // {product, weight}
-          this.person_id = analysisfReq.person_id;
-          this.picture_before = analysisfReq.picture_before;
-          this.picture_after = analysisfReq.picture_after;
-        }
-      }    
-
     // for each product in the list, return:
     // sku, name, list of its pictures (with their weights and plate data)
     static async getProductsBySkuList(skuList) {
@@ -126,66 +115,36 @@ class MealAnalysisReq_DL{
         });
       }    
       
+      // save the request in the db
       static saveAnalysisRequest(analysisRequest) {
         return new Promise((resolve, reject) => {
-            con.beginTransaction(async (err) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
+            const sqlInsertRequest = `
+                INSERT INTO meal_analysis_requests
+                (person_id, description, weight_before, weight_after, picture_before, picture_after)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `;
     
-                const sqlInsertRequest = `
-                    INSERT INTO meal_analysis_requests
-                    (person_id, description, weight_before, weight_after, picture_before, picture_after)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                `;
-    
-                con.query(
-                    sqlInsertRequest,
-                    [
-                        analysisRequest.person_id,
-                        analysisRequest.description,
-                        analysisRequest.weight_before,
-                        analysisRequest.weight_after,
-                        analysisRequest.picture_before,
-                        analysisRequest.picture_after
-                    ],
-                    (err, result) => {
-                        if (err) {
-                            return con.rollback(() => reject(err));
-                        }
-    
-                        const requestId = result.insertId;
-                        const productInserts = analysisRequest.products.map(product => {
-                            return new Promise((resolve, reject) => {
-                                con.query(
-                                    `INSERT INTO meal_analysis_products (request_id, product_sku, weight_in_req) VALUES (?, ?, ?)`,
-                                    [requestId, product.sku, product.weight_in_req],
-                                    (err) => {
-                                        if (err) reject(err);
-                                        else resolve();
-                                    }
-                                );
-                            });
-                        });
-    
-                        Promise.all(productInserts)
-                            .then(() => {
-                                con.commit((err) => {
-                                    if (err) {
-                                        return con.rollback(() => reject(err));
-                                    }
-                                    resolve({ id: requestId, ...analysisRequest });
-                                });
-                            })
-                            .catch((err) => {
-                                con.rollback(() => reject(err));
-                            });
+            con.query(
+                sqlInsertRequest,
+                [
+                    analysisRequest.person_id,
+                    analysisRequest.description,
+                    analysisRequest.weight_before,
+                    analysisRequest.weight_after,
+                    analysisRequest.picture_before,
+                    analysisRequest.picture_after
+                ],
+                (err, result) => {
+                    if (err) {
+                        reject(err);
+                        return;
                     }
-                );
-            });
+    
+                    resolve({ id: result.insertId, ...analysisRequest });
+                }
+            );
         });
-    }
+    }   
 }
 
 export default MealAnalysisReq_DL;
