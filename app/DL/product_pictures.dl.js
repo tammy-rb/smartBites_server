@@ -76,9 +76,30 @@ class ProductPicturesDL {
         }
         if (results.length === 0) {
           resolve([]); // No results found
-        } else {
-          resolve(results); // Return all results with plate details
+          return;
         }
+
+        // Group results by sku
+        const groupedResults = results.reduce((acc, item) => {
+          if (!acc[item.sku]) {
+            acc[item.sku] = {
+              sku: item.sku,
+              pictures: []
+            };
+          }
+          acc[item.sku].pictures.push({
+            id: item.id,
+            imageUrl: item.image_url,
+            weight: item.weight,
+            plateId: item.plate_id,
+            upperDiameter: item.upperDiameter,
+            lowerDiameter: item.lowerDiameter,
+            depth: item.depth
+          });
+          return acc;
+        }, {});
+
+        resolve(Object.values(groupedResults));
       });
     });
   }

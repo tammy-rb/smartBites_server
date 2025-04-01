@@ -48,6 +48,21 @@ class ProductCrud {
     }
   }
 
+  static async getProductWithPictures(req, res) {
+    try {
+      const sku = req.params.sku.trim().toUpperCase();
+      const product = await Product.findBySku(sku);
+      if (!product) {
+        return res.status(404).json({ error: "Product not found" });
+      }
+      const pictures = await ProductPicturesDL.findBySku(sku);
+      res.json({ ...product, pictures });
+    } catch (error) {
+      console.error("Error fetching product with pictures:", error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   static async updateProduct(req, res) {
     try {
       // Create updated product object with only name

@@ -3,6 +3,7 @@ import con from "./connection.js"
 /**
  * Clear all data from the database 
  * make the db empty withou tables and data
+ * not delte the requests table!
  */
 
 const clearDBTables = () => {
@@ -15,7 +16,7 @@ const clearDBTables = () => {
 
       console.log("Connected to MySQL for table deletion.");
 
-      const tables = [ "product_pictures", "products", "plates"];
+      const tables = [  "product_pictures", "products", "plates"];
       const dropTablePromises = tables.map((table) => {
         return new Promise((resolve, reject) => {
           con.query(`DROP TABLE IF EXISTS ${table}`, (err, result) => {

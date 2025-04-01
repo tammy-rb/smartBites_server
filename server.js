@@ -4,6 +4,7 @@ import cors from 'cors';
 import fs from 'fs';
 import productRoute from './app/routes/product.routes.js'
 import productPicturesRoute from './app/routes/product_picture.route.js'
+import MealAnalysis from './app/routes/meal-analysis_req.js'
 
 import initRoute from './app/routes/initialization.route.js';
 
@@ -41,7 +42,8 @@ app.use((req, res, next) => {
 
 initRoute(app);
 app.use('/products', productRoute);
-app.use('/product_pictures', productPicturesRoute);
+app.use('/product-pictures', productPicturesRoute);
+app.use('/meal-analysis', MealAnalysis);
 
 // Define a simple GET route
 app.get("/", (req, res) => {

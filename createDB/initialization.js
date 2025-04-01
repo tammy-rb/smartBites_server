@@ -2,6 +2,7 @@ import createPlatesTable from './createPlatesTable.js';
 import createProductsTable from './createProductsTable.js';
 import clearDBTables from './clearDB.js';
 import createProductPicturesTable from './createProductsPicturesTable.js';
+import createMealAnalysisTables from './createMealAnalysisTables.js';
 
 
 
@@ -16,6 +17,7 @@ const initialization = async function(result) {
     await createPlatesTable();
     await createProductsTable();
     await createProductPicturesTable();
+    await createMealAnalysisTables();
     console.log("Database and tables created successfully.")
     result(null, "Database and tables created successfully");
   } catch (error) {
