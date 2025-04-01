@@ -13,6 +13,8 @@ class MealAnalysisReq_DL{
         }
       }    
 
+    // for each product in the list, return:
+    // sku, name, list of its pictures (with their weights and plate data)
     static async getProductsBySkuList(skuList) {
 
         return new Promise((resolve, reject) => {
@@ -124,9 +126,66 @@ class MealAnalysisReq_DL{
         });
       }    
       
-      static async saveAnalysisRequest(params1) {
-        return null;
-      }
+      static saveAnalysisRequest(analysisRequest) {
+        return new Promise((resolve, reject) => {
+            con.beginTransaction(async (err) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+    
+                const sqlInsertRequest = `
+                    INSERT INTO meal_analysis_requests
+                    (person_id, description, weight_before, weight_after, picture_before, picture_after)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `;
+    
+                con.query(
+                    sqlInsertRequest,
+                    [
+                        analysisRequest.person_id,
+                        analysisRequest.description,
+                        analysisRequest.weight_before,
+                        analysisRequest.weight_after,
+                        analysisRequest.picture_before,
+                        analysisRequest.picture_after
+                    ],
+                    (err, result) => {
+                        if (err) {
+                            return con.rollback(() => reject(err));
+                        }
+    
+                        const requestId = result.insertId;
+                        const productInserts = analysisRequest.products.map(product => {
+                            return new Promise((resolve, reject) => {
+                                con.query(
+                                    `INSERT INTO meal_analysis_products (request_id, product_sku, weight_in_req) VALUES (?, ?, ?)`,
+                                    [requestId, product.sku, product.weight_in_req],
+                                    (err) => {
+                                        if (err) reject(err);
+                                        else resolve();
+                                    }
+                                );
+                            });
+                        });
+    
+                        Promise.all(productInserts)
+                            .then(() => {
+                                con.commit((err) => {
+                                    if (err) {
+                                        return con.rollback(() => reject(err));
+                                    }
+                                    resolve({ id: requestId, ...analysisRequest });
+                                });
+                            })
+                            .catch((err) => {
+                                con.rollback(() => reject(err));
+                            });
+                    }
+                );
+            });
+        });
+    }
 }
 
 export default MealAnalysisReq_DL;

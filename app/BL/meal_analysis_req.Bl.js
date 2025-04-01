@@ -14,19 +14,19 @@ class MealAnalysisController {
             const savedRequest = await MealAnalysisDL.saveAnalysisRequest(analysisRequest);
             
             // Prepare data for LLM - excluding weight information that will be predicted
-            const llmRequestData = MealAnalysisController.prepareLlmRequest(analysisRequest);
+            //const llmRequestData = MealAnalysisController.prepareLlmRequest(analysisRequest);
             
             // Send to LLM and get results
-            const llmResults = await MealAnalysisController.analyzeMealWithLLM(llmRequestData);
+            //const llmResults = await MealAnalysisController.analyzeMealWithLLM(llmRequestData);
             
             // Compare with provided weights for verification
-            const verificationResults = MealAnalysisController.verifyResults(llmResults, analysisRequest);
+            //const verificationResults = MealAnalysisController.verifyResults(llmResults, analysisRequest);
             
             // Return combined results
             res.status(200).json({
                 request_id: savedRequest.id,
-                llm_analysis: llmResults,
-                verification: verificationResults
+                //llm_analysis: llmResults,
+                //verification: verificationResults
             });
             
         } catch (error) {
