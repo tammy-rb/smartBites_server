@@ -1,4 +1,4 @@
-import fs from 'fs';
+/*import fs from 'fs';
 import axios from 'axios';
 
 async function analyzeMealWithLLM(analysisRequest, llmRequestPrompt) {
@@ -207,9 +207,9 @@ Additional information:
 }
 
 export { prepareLlmPrompt, analyzeMealWithLLM };
+*/
 
-
-/*function prepareLlmPrompt(analysisRequest) {
+function prepareLlmPrompt(analysisRequest) {
     
     // Base prompt with detailed instructions
     let prompt = `
@@ -279,4 +279,3 @@ export { prepareLlmPrompt, analyzeMealWithLLM };
 }
 
 export default prepareLlmPrompt;
-*/

@@ -18,7 +18,7 @@ class MealAnalysisController {
             const llmRequestPrompt = prepareLlmPrompt(analysisRequest);
             
             // Send to LLM and get results
-            const llmResults = await MealAnalysisController.analyzeMealWithLLM(analysisRequest, llmRequestPrompt);
+            //const llmResults = await MealAnalysisController.analyzeMealWithLLM(analysisRequest, llmRequestPrompt);
             
             // Compare with provided weights for verification
             //const verificationResults = MealAnalysisController.verifyResults(llmResults, analysisRequest);
