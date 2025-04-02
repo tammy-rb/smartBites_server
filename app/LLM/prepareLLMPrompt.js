@@ -1,3 +1,76 @@
+
+
+function prepareLlmPrompt(analysisRequest) {
+    
+    // Base prompt with detailed instructions
+    let prompt = `
+        # Meal Analysis Task
+
+        ## Context
+        You are analyzing before and after images of a meal to determine how much of each product was consumed. 
+
+        ## Input Images
+        - Before meal image: ${analysisRequest.picture_before}
+        - After meal image: ${analysisRequest.picture_after}
+
+        ## Products in the Meal
+        The meal contains the following products. For each product, you have reference images showing known weights:
+        `;
+
+    // Add detailed information about each product
+    analysisRequest.products.forEach(product => {
+        prompt += `
+        ### ${product.name} (SKU: ${product.sku})
+        Reference images with known weights:
+        `;
+        product.pictures.forEach(pic => {
+            prompt += `- Image: ${pic.imageUrl} - Weight: ${pic.weight}g on plate with dimensions: upper diameter ${pic.upperDiameter}cm, lower diameter ${pic.lowerDiameter}cm, depth ${pic.depth}cm\n`;
+        });
+    });
+
+    // Add task description and expected output format
+    prompt += `
+        ## Your Task
+        1. Analyze the before and after meal images.
+        2. Using the reference product images with known weights, estimate:
+        - The weight of each product BEFORE the meal (visible in the before image)
+        - The weight of each product AFTER the meal (remaining in the after image)
+        3. Base your estimates on visual cues such as portion sizes, volume, and comparison with reference images.
+
+        ## Expected Output Format
+        Provide your analysis in the following JSON format:
+
+        \`\`\`json
+        {
+        "products": [
+            {
+            "sku": "PRODUCT_SKU",
+            "estimated_weight_before": X.XX,
+            "estimated_weight_after": Y.YY,
+            "estimated_consumed": Z.ZZ
+            },
+            // Repeat for each product
+        ],
+        "total_weight": {
+            "estimated_before": TOTAL_BEFORE,
+            "estimated_after": TOTAL_AFTER,
+            "estimated_consumed": TOTAL_CONSUMED
+        },
+        "confidence_level": "HIGH/MEDIUM/LOW",
+        "reasoning": "Brief explanation of how you made your estimates..."
+        }
+        \`\`\`
+
+        Additional information:
+        - The total meal weight before was ${analysisRequest.weight_before}g (including plate)
+        - Description: "${analysisRequest.description || 'No description provided'}"
+        `;
+
+    return prompt;
+}
+
+export default prepareLlmPrompt;
+
 /*import fs from 'fs';
 import axios from 'axios';
 
@@ -208,74 +281,3 @@ Additional information:
 
 export { prepareLlmPrompt, analyzeMealWithLLM };
 */
-
-function prepareLlmPrompt(analysisRequest) {
-    
-    // Base prompt with detailed instructions
-    let prompt = `
-        # Meal Analysis Task
-
-        ## Context
-        You are analyzing before and after images of a meal to determine how much of each product was consumed. 
-
-        ## Input Images
-        - Before meal image: ${analysisRequest.picture_before}
-        - After meal image: ${analysisRequest.picture_after}
-
-        ## Products in the Meal
-        The meal contains the following products. For each product, you have reference images showing known weights:
-        `;
-
-    // Add detailed information about each product
-    analysisRequest.products.forEach(product => {
-        prompt += `
-        ### ${product.name} (SKU: ${product.sku})
-        Reference images with known weights:
-        `;
-        product.pictures.forEach(pic => {
-            prompt += `- Image: ${pic.imageUrl} - Weight: ${pic.weight}g on plate with dimensions: upper diameter ${pic.upperDiameter}cm, lower diameter ${pic.lowerDiameter}cm, depth ${pic.depth}cm\n`;
-        });
-    });
-
-    // Add task description and expected output format
-    prompt += `
-        ## Your Task
-        1. Analyze the before and after meal images.
-        2. Using the reference product images with known weights, estimate:
-        - The weight of each product BEFORE the meal (visible in the before image)
-        - The weight of each product AFTER the meal (remaining in the after image)
-        3. Base your estimates on visual cues such as portion sizes, volume, and comparison with reference images.
-
-        ## Expected Output Format
-        Provide your analysis in the following JSON format:
-
-        \`\`\`json
-        {
-        "products": [
-            {
-            "sku": "PRODUCT_SKU",
-            "estimated_weight_before": X.XX,
-            "estimated_weight_after": Y.YY,
-            "estimated_consumed": Z.ZZ
-            },
-            // Repeat for each product
-        ],
-        "total_weight": {
-            "estimated_before": TOTAL_BEFORE,
-            "estimated_after": TOTAL_AFTER,
-            "estimated_consumed": TOTAL_CONSUMED
-        },
-        "confidence_level": "HIGH/MEDIUM/LOW",
-        "reasoning": "Brief explanation of how you made your estimates..."
-        }
-        \`\`\`
-
-        Additional information:
-        - The total meal weight before was ${analysisRequest.weight_before}g (including plate)
-        - Description: "${analysisRequest.description || 'No description provided'}"
-        `;
-
-    return prompt;
-}
-
-export default prepareLlmPrompt;
