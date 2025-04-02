@@ -14,20 +14,17 @@ class MealAnalysisController {
             // Save the request to the database
             const savedRequest = await MealAnalysisDL.saveAnalysisRequest(analysisRequest);
             
-            // Prepare data for LLM - excluding weight information that will be predicted
-            const llmRequestPrompt = prepareLlmPrompt(analysisRequest);
-            
             // Send to LLM and get results
-            //const llmResults = await MealAnalysisController.analyzeMealWithLLM(analysisRequest, llmRequestPrompt);
-            
-            // Compare with provided weights for verification
-            //const verificationResults = MealAnalysisController.verifyResults(llmResults, analysisRequest);
-            
-            // Return combined results
+            // Send request to Python service
+            const pythonApiResponse = await axios.post("http://127.0.0.1:8000/analyze-meal", {
+                meal_details: analysisRequest, // Pass the meal description
+                model_name: "gpt-4"  // Change model dynamically
+            });
+
+            // Return response
             res.status(200).json({
                 request_id: savedRequest.id,
-                //llm_analysis: llmResults,
-                //verification: verificationResults
+                llm_analysis: pythonApiResponse.data.analysis
             });
             
         } catch (error) {
