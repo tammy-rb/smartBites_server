@@ -36,7 +36,7 @@ class ProductPicturesBL {
     try {
       const productPictures = await ProductPicturesDL.findBySku(req.params.sku.trim().toUpperCase());
       if (!productPictures || productPictures.length === 0) {
-        return res.status(404).json({ error: "Product picture not found" });
+        return res.json([]);
       }
       res.json(productPictures);
     } catch (error) {
